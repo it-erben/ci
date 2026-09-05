@@ -3,5 +3,7 @@ on: push
 jobs:
   probe:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - run: echo ok
