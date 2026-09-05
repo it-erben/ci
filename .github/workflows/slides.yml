@@ -1,0 +1,97 @@
+name: Folien
+
+on:
+  workflow_call:
+    inputs:
+      source-dir:
+        description: Verzeichnis mit den Foliendecks
+        type: string
+        default: slides
+      marp-version:
+        description: Version von @marp-team/marp-cli
+        type: string
+        default: 4.2.3
+      pages:
+        description: Ergebnis zusätzlich als Pages-Artefakt hochladen
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Chrome finden
+        run: |
+          set -eu
+          for c in google-chrome chromium-browser chromium; do
+            if command -v "$c" >/dev/null; then
+              echo "CHROME_PATH=$(command -v "$c")" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          echo "Kein Chrome auf dem Runner gefunden." >&2
+          exit 1
+
+      - name: PDFs bauen
+        env:
+          INPUT_DIRECTORY: ${{ inputs.source-dir }}
+          MARP_VERSION: ${{ inputs.marp-version }}
+          CHROME_NO_SANDBOX: "1"
+        run: |
+          set -eu
+          ROOT=public
+          mkdir -p "$ROOT"
+
+          if [ ! -d "$INPUT_DIRECTORY" ]; then
+            echo "$INPUT_DIRECTORY existiert nicht, nichts zu bauen."
+            exit 0
+          fi
+
+          LIST_ITEMS=""
+          for DIR in "$INPUT_DIRECTORY"/*/; do
+            [ -f "$DIR/slides.md" ] || continue
+            BASENAME=$(basename "$DIR")
+            npx -y "@marp-team/marp-cli@$MARP_VERSION" "$DIR/slides.md" \
+              --pdf --allow-local-files -o "$ROOT/$BASENAME.pdf"
+            test -s "$ROOT/$BASENAME.pdf"
+            LIST_ITEMS="${LIST_ITEMS}<li><a href=\"$BASENAME.pdf\">$BASENAME</a></li>"
+          done
+
+          for PDF in "$INPUT_DIRECTORY"/*.pdf; do
+            [ -f "$PDF" ] || continue
+            BASENAME=$(basename "$PDF" .pdf)
+            cp "$PDF" "$ROOT/$BASENAME.pdf"
+            LIST_ITEMS="${LIST_ITEMS}<li><a href=\"$BASENAME.pdf\">$BASENAME</a></li>"
+          done
+
+          TEMPLATE_FILE="$INPUT_DIRECTORY/template.html"
+          if [ -f "$TEMPLATE_FILE" ]; then
+            TEMPLATE_CONTENT=$(cat "$TEMPLATE_FILE")
+            # shellcheck disable=SC2059
+            printf "$TEMPLATE_CONTENT" "<ul>${LIST_ITEMS}</ul>" > "$ROOT/index.html"
+          else
+            echo "Keine Vorlage unter $TEMPLATE_FILE, index.html entfällt." >&2
+          fi
+
+          ls -l "$ROOT"
+
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: folien
+          path: public
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - if: inputs.pages
+        uses: actions/upload-pages-artifact@v5.0.0
+        with:
+          path: public

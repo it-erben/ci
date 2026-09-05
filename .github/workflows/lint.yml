@@ -1,0 +1,78 @@
+name: Lint
+
+on:
+  workflow_call:
+    inputs:
+      markdown:
+        description: markdownlint-cli2 ausführen
+        type: boolean
+        default: true
+      yaml:
+        description: yamllint ausführen
+        type: boolean
+        default: true
+      yamllint-config:
+        description: yamllint-Konfiguration als Inline-YAML
+        type: string
+        default: "{extends: relaxed, ignore: '*.md', rules: {line-length: {max: 140}}}"
+      yamllint-path:
+        description: Pfad, den yamllint prüft
+        type: string
+        default: "."
+      lychee:
+        description: Link-Prüfung ausführen
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  markdown:
+    if: inputs.markdown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: DavidAnson/markdownlint-cli2-action@v24.2.0
+        with:
+          globs: |
+            **/*.md
+            !**/node_modules/**
+            !**/.git/**
+
+  yaml:
+    if: inputs.yaml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: yamllint
+        env:
+          YAMLLINT_CONFIG: ${{ inputs.yamllint-config }}
+          YAMLLINT_PATH: ${{ inputs.yamllint-path }}
+        run: |
+          pipx install yamllint
+          yamllint -d "$YAMLLINT_CONFIG" "$YAMLLINT_PATH"
+
+  lychee:
+    if: inputs.lychee
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: lycheeverse/lychee-action@v2.9.0
+        with:
+          args: >-
+            --accept 429,200
+            --exclude "http://localhost.*"
+            --exclude-path .npm-cache
+            --max-concurrency 4
+            --retry-wait-time 2
+            --timeout 20
+            --no-progress
+            '**/*.md'
+          output: lychee-results.md
+          fail: true
+      - if: failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: lychee-results
+          path: lychee-results.md

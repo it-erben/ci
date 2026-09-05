@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      semantic-release-version:
+        type: string
+        default: 25.0.2
+      conventional-changelog-version:
+        type: string
+        default: 9.1.0
+      exec-plugin-version:
+        type: string
+        default: 7.1.0
+    outputs:
+      published:
+        description: true, wenn ein Release entstanden ist
+        value: ${{ jobs.release.outputs.published }}
+      version:
+        description: Version des erzeugten Releases
+        value: ${{ jobs.release.outputs.version }}
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      published: ${{ steps.semantic.outputs.published }}
+      version: ${{ steps.semantic.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Konfiguration schreiben
+        run: |
+          cat > .releaserc.yml <<'CONFIG'
+          tagFormat: "${version}"
+          branches:
+            - main
+            - master
+          plugins:
+            - - "@semantic-release/commit-analyzer"
+              - preset: conventionalcommits
+                releaseRules:
+                  # Schulungsunterlagen: die Dokumentation ist das Produkt,
+                  # ein docs-Commit muss deshalb ausgeliefert werden. Ergänzt
+                  # die feat/fix-Regeln des Presets.
+                  - type: docs
+                    release: patch
+            - - "@semantic-release/release-notes-generator"
+              - preset: conventionalcommits
+            - "@semantic-release/github"
+            - - "@semantic-release/exec"
+              - successCmd: >-
+                  echo "published=true" >> $GITHUB_OUTPUT &&
+                  echo "version=${nextRelease.version}" >> $GITHUB_OUTPUT
+          CONFIG
+
+      - name: semantic-release
+        id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SR_VERSION: ${{ inputs.semantic-release-version }}
+          CC_VERSION: ${{ inputs.conventional-changelog-version }}
+          EXEC_VERSION: ${{ inputs.exec-plugin-version }}
+          DRY_RUN: ${{ github.event_name == 'pull_request' && '--dry-run' || '' }}
+        run: |
+          set -euo pipefail
+          npx --yes \
+            -p "semantic-release@$SR_VERSION" \
+            -p "conventional-changelog-conventionalcommits@$CC_VERSION" \
+            -p "@semantic-release/exec@$EXEC_VERSION" \
+            semantic-release $DRY_RUN
