@@ -31,4 +31,8 @@ jobs:
   release:
     needs: [actionlint, lint]
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     uses: ./.github/workflows/release.yml

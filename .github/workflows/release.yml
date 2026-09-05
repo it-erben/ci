@@ -20,16 +20,9 @@ on:
         description: Version des erzeugten Releases
         value: ${{ jobs.release.outputs.version }}
 
-permissions:
-  contents: read
-
 jobs:
   release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
     outputs:
       published: ${{ steps.semantic.outputs.published }}
       version: ${{ steps.semantic.outputs.version }}
