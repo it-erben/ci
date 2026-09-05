@@ -78,6 +78,7 @@ jobs:
           DRY_RUN: ${{ github.event_name == 'pull_request' && '--dry-run' || '' }}
         run: |
           set -euo pipefail
+          # shellcheck disable=SC2086  # DRY_RUN ist entweder leer oder ein Flag
           npx --yes \
             -p "semantic-release@$SR_VERSION" \
             -p "conventional-changelog-conventionalcommits@$CC_VERSION" \
