@@ -39,10 +39,10 @@ Vorgabe für `yamllint-config`:
 
 markdownlint liest `.markdownlint.json`, `.markdownlint.yaml` oder
 `.markdownlint-cli2.yaml` aus dem aufrufenden Repository. lychee liest
-`.lycheeignore`. GitHub-Links unter `/blob/` und `/tree/` prüft lychee ohne
-die Webseite: Links ins aufrufende Repository gegen den Checkout, fremde
-Dateien über `raw.githubusercontent.com`, fremde Verzeichnisse über die
-Contents-API.
+`.lycheeignore`. GitHub-Links unter `/blob/`, `/tree/` und `/releases` prüft
+lychee ohne die Webseite: Links ins aufrufende Repository gegen den Checkout,
+fremde Dateien über `raw.githubusercontent.com`, fremde Verzeichnisse und
+Release-Übersichten über die REST-API.
 
 ### `slides.yml`
 

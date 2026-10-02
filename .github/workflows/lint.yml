@@ -69,7 +69,8 @@ jobs:
       # GitHub beantwortet Seiten unter /blob/ und /tree/ für Runner ohne
       # Anmeldung oft mit 503 oder 504. Links ins eigene Repository prüft
       # lychee deshalb gegen den Checkout, Dateien fremder Repositories über
-      # raw.githubusercontent.com und Verzeichnisse über die Contents-API.
+      # raw.githubusercontent.com, Verzeichnisse und Release-Übersichten über
+      # die REST-API.
       - uses: lycheeverse/lychee-action@v2.9.0
         with:
           lycheeVersion: ${{ inputs.lychee-version }}
@@ -78,6 +79,7 @@ jobs:
             --remap 'https://github\.com/${{ github.repository }}/(tree|blob)/${{ github.event.repository.default_branch }}/([^#]+)(#.*)? file://${{ github.workspace }}/$2'
             --remap 'https://github\.com/([^/]+)/([^/]+)/blob/([^#]+)(#.*)? https://raw.githubusercontent.com/$1/$2/$3'
             --remap 'https://github\.com/([^/]+)/([^/]+)/tree/([^/#]+)/([^#]+)(#.*)? https://api.github.com/repos/$1/$2/contents/$4?ref=$3'
+            --remap '^https://github\.com/([^/]+)/([^/]+)/releases/?$ https://api.github.com/repos/$1/$2/releases'
             --exclude "http://localhost.*"
             --exclude-path .npm-cache
             --max-concurrency 4
